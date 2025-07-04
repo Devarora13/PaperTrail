@@ -817,6 +817,11 @@ body {
   font-size: 0.875rem;
 }
 
+.user-avatar-img {
+  object-fit: cover;
+}
+
+
 .user-details {
   display: flex;
   flex-direction: column;
@@ -1004,6 +1009,7 @@ body {
 }
 
 .status {
+  width: fit-content;
   padding: 0.5rem 1rem;
   border-radius: 2rem;
   font-size: 0.75rem;
@@ -1068,7 +1074,7 @@ body {
   transform: translateY(-2px);
 }
 
-.btn-icon.danger:hover {
+.danger:hover {
   background: var(--error-color);
   color: white;
 }
@@ -2579,7 +2585,6 @@ select:focus {
   display: grid;
   grid-template-columns: 250px 1fr;
   gap: 2rem;
-  max-width: 1200px;
 }
 
 .settings-sidebar {
@@ -2828,7 +2833,6 @@ select:focus {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
-  text-align: right;
 }
 
 .meta-item {

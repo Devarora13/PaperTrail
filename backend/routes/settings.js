@@ -1,39 +1,9 @@
 const express = require("express")
 const User = require("../models/User")
 const auth = require("../middleware/auth")
-const multer = require("multer")
-const path = require("path")
+const { upload } = require("../configs/cloudinary");
 
 const router = express.Router()
-
-// Configure multer for logo uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/logos/")
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9)
-    cb(null, "logo-" + uniqueSuffix + path.extname(file.originalname))
-  },
-})
-
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif/
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase())
-    const mimetype = allowedTypes.test(file.mimetype)
-
-    if (mimetype && extname) {
-      return cb(null, true)
-    } else {
-      cb(new Error("Only image files are allowed"))
-    }
-  },
-})
 
 // Get user settings
 router.get("/", auth, async (req, res) => {
@@ -59,7 +29,7 @@ router.put("/business", auth, upload.single("logo"), async (req, res) => {
       "address.state": state,
       "address.pincode": pincode,
       "address.country": country,
-    } = req.body
+    } = req.body;
 
     const updateData = {
       businessname,
@@ -73,24 +43,34 @@ router.put("/business", auth, upload.single("logo"), async (req, res) => {
         pincode,
         country: country || "India",
       },
+    };
+
+    const user = await User.findById(req.userId);
+
+    if (req.file && req.file.path) {
+      //  Delete old logo from Cloudinary
+      if (user.companyLogoPublicId) {
+        const { cloudinary } = require("../configs/cloudinary");
+        await cloudinary.uploader.destroy(user.companyLogoPublicId);
+      }
+
+      //  Save new logo
+      updateData.companyLogo = req.file.path; // Cloudinary secure_url
+      updateData.companyLogoPublicId = req.file.filename; // Public ID generated in multer-storage-cloudinary
     }
 
-    // Add logo path if file was uploaded
-    if (req.file) {
-      updateData.companyLogo = `/uploads/logos/${req.file.filename}`
-    }
-
-    const user = await User.findByIdAndUpdate(req.userId, updateData, {
+    const updatedUser = await User.findByIdAndUpdate(req.userId, updateData, {
       new: true,
       runValidators: true,
-    }).select("-password")
+    }).select("-password");
 
-    res.json(user)
+    res.json(updatedUser);
   } catch (error) {
-    console.error("Update business settings error:", error)
-    res.status(500).json({ message: "Server error" })
+    console.error("Update business settings error:", error);
+    res.status(500).json({ message: "Server error" });
   }
-})
+});
+
 
 // Update tax settings
 router.put("/tax", auth, async (req, res) => {

@@ -349,7 +349,7 @@ const CreateInvoice = () => {
           </button>
           <button type="submit" className="btn btn-primary" disabled={loading}>
             <Send size={20} />
-            {loading ? "Creating..." : "Create & Send Invoice"}
+            {loading ? "Creating..." : "Create Invoice"}
           </button>
         </div>
       </form>

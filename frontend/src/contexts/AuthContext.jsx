@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }) => {
     delete api.defaults.headers.common["Authorization"]
     setUser(null)
     // Redirect to home page after logout
-    window.location.href = "/"
+    // window.location.href = "/"
   }
 
   return (

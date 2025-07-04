@@ -1,12 +1,19 @@
-
-import { useState, useEffect } from "react"
-import { Save, Upload, Building, Percent, Phone, MapPin, Camera } from "lucide-react"
-import api from "../services/api"
-import { useToast } from "../contexts/ToastContext"
-import { useAuth } from "../contexts/AuthContext"
+import { useState, useEffect } from "react";
+import {
+  Save,
+  Upload,
+  Building,
+  Percent,
+  Phone,
+  MapPin,
+  Camera,
+} from "lucide-react";
+import api from "../services/api";
+import { useToast } from "../contexts/ToastContext";
+import { useAuth } from "../contexts/AuthContext";
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState("business")
+  const [activeTab, setActiveTab] = useState("business");
   const [businessData, setBusinessData] = useState({
     businessname: "",
     phone: "",
@@ -20,12 +27,12 @@ const Settings = () => {
     gstin: "",
     defaultTaxRate: 18,
     companyLogo: "",
-  })
-  const [loading, setLoading] = useState(false)
-  const [logoFile, setLogoFile] = useState(null)
-  const [logoPreview, setLogoPreview] = useState("")
-  const { user } = useAuth()
-  const { addToast } = useToast()
+  });
+  const [loading, setLoading] = useState(false);
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState("");
+  const { user } = useAuth();
+  const { addToast } = useToast();
 
   useEffect(() => {
     if (user) {
@@ -42,99 +49,105 @@ const Settings = () => {
         gstin: user.gstin || "",
         defaultTaxRate: user.defaultTaxRate || 18,
         companyLogo: user.companyLogo || "",
-      })
-      setLogoPreview(user.companyLogo || "")
+      });
+      setLogoPreview(user.companyLogo || "");
     }
-  }, [user])
+  }, [user]);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
 
     if (name.startsWith("address.")) {
-      const addressField = name.split(".")[1]
+      const addressField = name.split(".")[1];
       setBusinessData({
         ...businessData,
         address: {
           ...businessData.address,
           [addressField]: value,
         },
-      })
+      });
     } else {
       setBusinessData({
         ...businessData,
         [name]: value,
-      })
+      });
     }
-  }
+  };
 
   const handleLogoChange = (e) => {
-    const file = e.target.files[0]
+    const file = e.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        addToast("Logo file size should be less than 5MB", "error")
-        return
+        addToast("Logo file size should be less than 5MB", "error");
+        return;
       }
 
       // Create preview
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onload = (e) => {
-        setLogoPreview(e.target.result)
-      }
-      reader.readAsDataURL(file)
+        setLogoPreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
 
-      setLogoFile(file)
+      setLogoFile(file);
     }
-  }
+  };
 
   const handleSaveSettings = async () => {
-    setLoading(true)
+    setLoading(true);
 
     try {
-      const formData = new FormData()
+      const formData = new FormData();
 
       // Append business data
       Object.keys(businessData).forEach((key) => {
         if (key === "address") {
           Object.keys(businessData.address).forEach((addressKey) => {
-            formData.append(`address.${addressKey}`, businessData.address[addressKey])
-          })
+            formData.append(
+              `address.${addressKey}`,
+              businessData.address[addressKey]
+            );
+          });
         } else if (key !== "companyLogo") {
-          formData.append(key, businessData[key])
+          formData.append(key, businessData[key]);
         }
-      })
+      });
 
       // Append logo file if selected
       if (logoFile) {
-        formData.append("logo", logoFile)
+        formData.append("logo", logoFile);
       }
 
       const response = await api.put("/settings/business", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      })
+      });
 
-      addToast("Settings saved successfully", "success")
+      addToast("Settings saved successfully", "success");
 
       // Update business data with response
-      setBusinessData(response.data)
-      setLogoFile(null)
+      setBusinessData(response.data);
+      setLogoFile(null);
 
-      // Update logo preview with server response
+      // Update logo preview
       if (response.data.companyLogo) {
-        setLogoPreview(`${process.env.REACT_APP_API_URL || "http://localhost:5000"}${response.data.companyLogo}`)
+        setLogoPreview(response.data.companyLogo); // Cloudinary already gives full URL
       }
     } catch (error) {
-      addToast(error.response?.data?.message || "Error saving settings", "error")
+      addToast(
+        error.response?.data?.message || "Error saving settings",
+        "error"
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const tabs = [
     { id: "business", label: "Business Info", icon: Building },
     { id: "tax", label: "Tax Settings", icon: Percent },
-  ]
+  ];
 
   return (
     <div className="page-container">
@@ -148,17 +161,19 @@ const Settings = () => {
       <div className="settings-container">
         <div className="settings-sidebar">
           {tabs.map((tab) => {
-            const Icon = tab.icon
+            const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`settings-tab ${activeTab === tab.id ? "active" : ""}`}
+                className={`settings-tab ${
+                  activeTab === tab.id ? "active" : ""
+                }`}
               >
                 <Icon size={20} />
                 {tab.label}
               </button>
-            )
+            );
           })}
         </div>
 
@@ -176,7 +191,11 @@ const Settings = () => {
                   <div className="logo-upload-section">
                     <div className="logo-preview">
                       {logoPreview ? (
-                        <img src={logoPreview || "/placeholder.svg"} alt="Company Logo" className="logo-image" />
+                        <img
+                          src={logoPreview || "/placeholder.svg"}
+                          alt="Company Logo"
+                          className="logo-image"
+                        />
                       ) : (
                         <div className="logo-placeholder">
                           <Camera size={32} />
@@ -339,7 +358,9 @@ const Settings = () => {
                         placeholder="18.00"
                       />
                     </div>
-                    <p className="field-help">This will be the default tax rate for new invoices</p>
+                    <p className="field-help">
+                      This will be the default tax rate for new invoices
+                    </p>
                   </div>
                 </div>
 
@@ -348,7 +369,9 @@ const Settings = () => {
                   <div className="tax-rates-grid">
                     <div className="tax-rate-card">
                       <span className="rate">0%</span>
-                      <span className="description">Essential goods, services</span>
+                      <span className="description">
+                        Essential goods, services
+                      </span>
                     </div>
                     <div className="tax-rate-card">
                       <span className="rate">5%</span>
@@ -360,7 +383,9 @@ const Settings = () => {
                     </div>
                     <div className="tax-rate-card">
                       <span className="rate">18%</span>
-                      <span className="description">Most services, IT services</span>
+                      <span className="description">
+                        Most services, IT services
+                      </span>
                     </div>
                     <div className="tax-rate-card">
                       <span className="rate">28%</span>
@@ -373,7 +398,11 @@ const Settings = () => {
           )}
 
           <div className="settings-actions">
-            <button onClick={handleSaveSettings} className="btn btn-primary" disabled={loading}>
+            <button
+              onClick={handleSaveSettings}
+              className="btn btn-primary"
+              disabled={loading}
+            >
               <Save size={20} />
               {loading ? "Saving..." : "Save Settings"}
             </button>
@@ -381,7 +410,7 @@ const Settings = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Settings
+export default Settings;

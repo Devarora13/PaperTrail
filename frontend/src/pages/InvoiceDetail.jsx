@@ -53,7 +53,7 @@ const InvoiceDetail = () => {
       await api.post(`/invoices/${id}/send-email`)
       addToast("Invoice sent successfully", "success")
     } catch (error) {
-      addToast("Email feature coming soon", "info")
+      addToast("Some error occurred", "error")
     }
   }
 
@@ -69,14 +69,6 @@ const InvoiceDetail = () => {
     }
   }
 
-  const handlePayment = async () => {
-    try {
-      const response = await api.post(`/invoices/${id}/create-payment`)
-      window.open(response.data.paymentUrl, "_blank")
-    } catch (error) {
-      addToast("Payment integration coming soon", "info")
-    }
-  }
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
@@ -131,29 +123,23 @@ const InvoiceDetail = () => {
           </Link>
           <div className="invoice-title">
             <h1>Invoice #{invoice.invoiceNumber}</h1>
-            <span className={`status ${getStatusColor(invoice.status)}`}>{invoice.status}</span>
           </div>
         </div>
 
         <div className="button-group">
-          <button onClick={handleDownloadPDF} className="btn btn-outline">
-            <Download size={20} />
-            Download PDF
-          </button>
-          <button onClick={handleSendEmail} className="btn btn-outline">
-            <Mail size={20} />
-            Send Email
-          </button>
-          {/* {invoice.status !== "paid" && (
-            <button onClick={handlePayment} className="btn btn-primary">
-              <CreditCard size={20} />
-              Pay Now
-            </button>
-          )} */}
           <button onClick={handleDelete} className="btn btn-outline danger">
             <Trash2 size={20} />
             Delete
           </button>
+          <button onClick={handleDownloadPDF} className="btn btn-outline">
+            <Download size={20} />
+            Download PDF
+          </button>
+          <button onClick={handleSendEmail} className="btn btn-primary">
+            <Mail size={20} />
+            Send Email
+          </button>
+          
         </div>
       </div>
 

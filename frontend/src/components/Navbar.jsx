@@ -1,13 +1,23 @@
-
-import { Link, useLocation } from "react-router-dom"
-import { useAuth } from "../contexts/AuthContext"
-import { useTheme } from "../contexts/ThemeContext"
-import { Home, Users, FileText, Plus, Upload, Settings, LogOut, Sun, Moon, BarChart3 } from "lucide-react"
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
+import {
+  Home,
+  Users,
+  FileText,
+  Plus,
+  Upload,
+  Settings,
+  LogOut,
+  Sun,
+  Moon,
+  BarChart3,
+} from "lucide-react";
 
 const Navbar = () => {
-  const { user, logout } = useAuth()
-  const { isDark, toggleTheme } = useTheme()
-  const location = useLocation()
+  const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
+  const location = useLocation();
 
   const navItems = [
     { path: "/", icon: Home, label: "Home" },
@@ -17,7 +27,7 @@ const Navbar = () => {
     { path: "/invoices/create", icon: Plus, label: "Create Invoice" },
     { path: "/bulk-invoice", icon: Upload, label: "Bulk Invoice" },
     { path: "/settings", icon: Settings, label: "Settings" },
-  ]
+  ];
 
   return (
     <nav className="navbar">
@@ -29,17 +39,19 @@ const Navbar = () => {
 
       <div className="navbar-menu">
         {navItems.map((item) => {
-          const Icon = item.icon
+          const Icon = item.icon;
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`navbar-item ${location.pathname === item.path ? "active" : ""}`}
+              className={`navbar-item ${
+                location.pathname === item.path ? "active" : ""
+              }`}
             >
               <Icon size={20} />
               <span>{item.label}</span>
             </Link>
-          )
+          );
         })}
       </div>
 
@@ -50,7 +62,18 @@ const Navbar = () => {
 
         <div className="user-menu">
           <div className="user-info">
-            <div className="user-avatar">{user?.businessname?.charAt(0) || "U"}</div>
+            {user?.companyLogo ? (
+              <img
+                src={user.companyLogo}
+                alt="Logo"
+                className="user-avatar user-avatar-img"
+              />
+            ) : (
+              <div className="user-avatar">
+                {user?.businessname?.charAt(0) || "U"}
+              </div>
+            )}
+
             <div className="user-details">
               <span className="user-name">{user?.businessname}</span>
               <span className="user-email">{user?.email}</span>
@@ -62,7 +85,7 @@ const Navbar = () => {
         </div>
       </div>
     </nav>
-  )
-}
+  );
+};
 
-export default Navbar
+export default Navbar;

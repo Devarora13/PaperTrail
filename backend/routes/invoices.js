@@ -7,7 +7,6 @@ const csv = require("csv-parser");
 const fs = require("fs");
 const path = require("path");
 const puppeteer = require("puppeteer");
-const nodemailer = require("nodemailer");
 const Razorpay = require("razorpay");
 const dotenv = require("dotenv").config();
 const {
@@ -18,7 +17,11 @@ const {
   template5,
 } = require("../utils/invoiceHtmlTemplates");
 
+const sgMail = require("@sendgrid/mail");
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
 const router = express.Router();
+
 
 // Configure multer for CSV uploads
 const upload = multer({ dest: "uploads/csv/" });
@@ -29,27 +32,19 @@ const upload = multer({ dest: "uploads/csv/" });
 //   key_secret: process.env.RAZORPAY_KEY_SECRET,
 // })
 
-// Configure Nodemailer
-const transporter = nodemailer.createTransport({
-  service: process.env.EMAIL_SERVICE || "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
 // HTML template for PDF generation
 const generateInvoiceHTML = (invoice) => {
-  if (invoice.templateId == 1) {
-    return template1(invoice);
-  } else if (invoice.templateId == 2) {
-    return template2(invoice);
-  } else if (invoice.templateId == 3) {
-    return template3(invoice);
-  } else if (invoice.templateId == 4) {
-    return template4(invoice);
-  } else if (invoice.templateId == 5) {
-    return template5(invoice);
+  switch (invoice.templateId) {
+    case 1:
+      return template1(invoice);
+    case 2:
+      return template2(invoice);
+    case 3:
+      return template3(invoice);
+    case 4:
+      return template4(invoice);
+    case 5:
+      return template5(invoice);
   }
 };
 
@@ -438,7 +433,7 @@ router.get("/:id/pdf", auth, async (req, res) => {
   }
 });
 
-// Send invoice via email
+// Send invoice via email (SendGrid)
 router.post("/:id/send-email", auth, async (req, res) => {
   let browser;
   try {
@@ -447,12 +442,16 @@ router.post("/:id/send-email", auth, async (req, res) => {
     const invoice = await Invoice.findOne({
       _id: req.params.id,
       user: req.userId,
-    }).populate("client");
+    }).populate("client").populate({
+        path: "user",
+        select: "email businessname phone address gstin",
+      });
+
     if (!invoice) {
       return res.status(404).json({ message: "Invoice not found" });
     }
 
-    // Generate PDF attachment
+    // Generate PDF
     browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -473,11 +472,10 @@ router.post("/:id/send-email", auth, async (req, res) => {
       },
     });
 
-    // Email options
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
+    const msg = {
       to: recipientEmail || invoice.client.email,
-      subject: subject || `Invoice ${invoice.invoiceNumber} from Your Company`,
+      from: process.env.FROM_EMAIL,
+      subject: subject || `Invoice ${invoice.invoiceNumber} from ${invoice.user.businessname}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Invoice ${invoice.invoiceNumber}</h2>
@@ -486,7 +484,7 @@ router.post("/:id/send-email", auth, async (req, res) => {
             message ||
             "Please find your invoice attached. Thank you for your business!"
           }</p>
-          
+
           <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3>Invoice Details:</h3>
             <p><strong>Invoice Number:</strong> ${invoice.invoiceNumber}</p>
@@ -499,22 +497,22 @@ router.post("/:id/send-email", auth, async (req, res) => {
             <p><strong>Total Amount:</strong> ₹${invoice.total.toFixed(2)}</p>
             <p><strong>Status:</strong> ${invoice.status.toUpperCase()}</p>
           </div>
-          
+
           <p>If you have any questions about this invoice, please contact us.</p>
-          <p>Best regards,<br>Your Company Team</p>
+          <p>Best regards,<br>${invoice.user.businessname}</p>
         </div>
       `,
       attachments: [
         {
+          content: pdfBuffer.toString("base64"),
           filename: `invoice-${invoice.invoiceNumber}.pdf`,
-          content: pdfBuffer,
-          contentType: "application/pdf",
+          type: "application/pdf",
+          disposition: "attachment",
         },
       ],
     };
 
-    // Send email
-    await transporter.sendMail(mailOptions);
+    await sgMail.send(msg);
 
     res.json({
       message: "Invoice sent successfully",
@@ -524,9 +522,7 @@ router.post("/:id/send-email", auth, async (req, res) => {
     console.error("Email sending error:", error);
     res.status(500).json({ message: "Error sending email: " + error.message });
   } finally {
-    if (browser) {
-      await browser.close();
-    }
+    if (browser) await browser.close();
   }
 });
 
