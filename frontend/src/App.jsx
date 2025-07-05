@@ -14,6 +14,7 @@ import CreateInvoice from "./pages/CreateInvoice"
 import InvoiceDetail from "./pages/InvoiceDetail"
 import BulkInvoice from "./pages/BulkInvoice"
 import Settings from "./pages/Settings"
+import NotFound from "./pages/NotFound"
 import "./App.css"
 
 function App() {
@@ -121,6 +122,8 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
+                {/* 404 Route */}
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </div>
           </Router>
