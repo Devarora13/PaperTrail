@@ -22,7 +22,7 @@ app.use(express.urlencoded({ extended: true }))
 
 // Create upload directories if they don't exist
 const fs = require("fs")
-const uploadDirs = ["uploads", "uploads/csv", "uploads/logos", "uploads/pdfs"]
+const uploadDirs = ["uploads/csv"]
 uploadDirs.forEach((dir) => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true })
@@ -52,7 +52,7 @@ app.use((err, req, res, next) => {
 
 // Connect to MongoDB
 mongoose
-  .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/papertrail")
+  .connect(process.env.MONGO_URI || "mongodb://localhost:27017/papertrail")
   .then(() => {
     console.log("Connected to MongoDB")
   })
