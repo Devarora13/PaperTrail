@@ -17,6 +17,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
+
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (token) {
@@ -26,6 +27,10 @@ export const AuthProvider = ({ children }) => {
       setLoading(false)
     }
   }, [])
+
+  const updateUser = (newUserData) => {
+    setUser((prevUser) => ({ ...prevUser, ...newUserData }))
+  }
 
   const fetchUser = async () => {
     try {
@@ -65,8 +70,6 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("token")
     delete api.defaults.headers.common["Authorization"]
     setUser(null)
-    // Redirect to home page after logout
-    // window.location.href = "/"
   }
 
   return (
@@ -77,6 +80,7 @@ export const AuthProvider = ({ children }) => {
         register,
         logout,
         loading,
+        updateUser,
       }}
     >
       {children}

@@ -31,7 +31,7 @@ const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState("");
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -134,6 +134,8 @@ const Settings = () => {
       if (response.data.companyLogo) {
         setLogoPreview(response.data.companyLogo); // Cloudinary already gives full URL
       }
+      // Update user context
+      updateUser(response.data);
     } catch (error) {
       addToast(
         error.response?.data?.message || "Error saving settings",

@@ -1,7 +1,7 @@
 const express = require("express")
 const User = require("../models/User")
 const auth = require("../middleware/auth")
-const { upload } = require("../configs/cloudinary");
+const { upload, cloudinary } = require("../configs/cloudinary");
 
 const router = express.Router()
 
@@ -45,18 +45,16 @@ router.put("/business", auth, upload.single("logo"), async (req, res) => {
       },
     };
 
-    const user = await User.findById(req.userId);
+    if (req.file && req.file.path && req.file.filename) {
+      // ✅ If previous public ID exists, delete it
+      const user = await User.findById(req.userId);
 
-    if (req.file && req.file.path) {
-      //  Delete old logo from Cloudinary
-      if (user.companyLogoPublicId) {
-        const { cloudinary } = require("../configs/cloudinary");
+      if (user.companyLogoPublicId && user.companyLogoPublicId !== req.file.filename) {
         await cloudinary.uploader.destroy(user.companyLogoPublicId);
       }
 
-      //  Save new logo
-      updateData.companyLogo = req.file.path; // Cloudinary secure_url
-      updateData.companyLogoPublicId = req.file.filename; // Public ID generated in multer-storage-cloudinary
+      updateData.companyLogo = req.file.path; // ✅ secure_url
+      updateData.companyLogoPublicId = req.file.filename; // ✅ public_id
     }
 
     const updatedUser = await User.findByIdAndUpdate(req.userId, updateData, {
