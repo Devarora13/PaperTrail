@@ -9,6 +9,8 @@ const path = require("path");
 const puppeteer = require("puppeteer");
 const Razorpay = require("razorpay");
 const dotenv = require("dotenv").config();
+const router = express.Router();
+
 const {
   template1,
   template2,
@@ -20,17 +22,15 @@ const {
 const sgMail = require("@sendgrid/mail");
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const router = express.Router();
-
 
 // Configure multer for CSV uploads
 const upload = multer({ dest: "uploads/csv/" });
 
 // Configure Razorpay
-// const razorpay = new Razorpay({
-//   key_id: process.env.RAZORPAY_KEY_ID,
-//   key_secret: process.env.RAZORPAY_KEY_SECRET,
-// })
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
 // HTML template for PDF generation
 const generateInvoiceHTML = (invoice) => {
@@ -150,6 +150,38 @@ router.post("/", auth, async (req, res) => {
     await invoice.save();
     await invoice.populate("client");
 
+    // 🔗 Generate Razorpay payment link
+    const paymentLinkOptions = {
+      amount: Math.round(invoice.total * 100),
+      currency: "INR",
+      accept_partial: false,
+      description: `Payment for Invoice ${invoice.invoiceNumber}`,
+      customer: {
+        name: invoice.client.name,
+        email: invoice.client.email,
+        contact: invoice.client.phone || undefined,
+      },
+      notify: {
+        sms: false, 
+        email: false,
+      },
+      reminder_enable: true,
+      notes: {
+        invoice_id: invoice._id.toString(),
+        invoice_number: invoice.invoiceNumber,
+      },
+      callback_url: `${process.env.FRONTEND_URL}/invoices/${invoice._id}/payment-success`,
+      callback_method: "get",
+    };
+
+    try {
+      const paymentLink = await razorpay.paymentLink.create(paymentLinkOptions);
+      invoice.paymentLink = paymentLink.short_url;
+      await invoice.save();
+    } catch (err) {
+      console.error("Failed to create payment link:", err.message);
+    }
+
     res.status(201).json(invoice);
   } catch (error) {
     console.error("Create invoice error:", error);
@@ -243,13 +275,11 @@ router.post(
       const csvData = [];
       const filePath = req.file.path;
 
-      // Read CSV file
       fs.createReadStream(filePath)
         .pipe(csv())
         .on("data", (data) => csvData.push(data))
         .on("end", async () => {
           try {
-            // Group data by client email to create invoices
             const clientGroups = {};
 
             csvData.forEach((row, index) => {
@@ -283,7 +313,6 @@ router.post(
                 };
               }
 
-              // Add item to client group
               clientGroups[email].items.push({
                 description: row["Item Description"]?.trim(),
                 quantity: Number.parseInt(row["Quantity"]) || 1,
@@ -292,10 +321,8 @@ router.post(
               });
             });
 
-            // Process each client group
             for (const [email, group] of Object.entries(clientGroups)) {
               try {
-                // Find or create client
                 let client = await Client.findOne({ email, user: req.userId });
                 if (!client) {
                   client = new Client({
@@ -306,7 +333,6 @@ router.post(
                   results.newClients++;
                 }
 
-                // Calculate totals
                 let subtotal = 0;
                 const processedItems = group.items.map((item) => {
                   const itemTotal =
@@ -318,11 +344,10 @@ router.post(
                   };
                 });
 
-                const taxRate = 18; // Default tax rate
+                const taxRate = 18;
                 const taxAmount = (subtotal * taxRate) / 100;
                 const total = subtotal + taxAmount;
 
-                // Create invoice
                 const invoice = new Invoice({
                   invoiceNumber: `INV-${Date.now()}-${Math.random()
                     .toString(36)
@@ -344,6 +369,43 @@ router.post(
 
                 await invoice.save();
                 await invoice.populate("client");
+
+                // 🔗 Generate Razorpay payment link
+                try {
+                  const paymentLinkOptions = {
+                    amount: Math.round(invoice.total * 100),
+                    currency: "INR",
+                    accept_partial: false,
+                    description: `Payment for Invoice ${invoice.invoiceNumber}`,
+                    customer: {
+                      name: client.name,
+                      email: client.email,
+                      contact: client.phone || undefined,
+                    },
+                    notify: {
+                      sms: false,
+                      email: false,
+                    },
+                    reminder_enable: true,
+                    notes: {
+                      invoice_id: invoice._id.toString(),
+                      invoice_number: invoice.invoiceNumber,
+                    },
+                    callback_url: `${process.env.FRONTEND_URL}/invoices/${invoice._id}/payment-success`,
+                    callback_method: "get",
+                  };
+
+                  const paymentLink = await razorpay.paymentLink.create(paymentLinkOptions);
+                  invoice.paymentLink = paymentLink.short_url;
+                  await invoice.save();
+                } catch (razorErr) {
+                  console.error(`Razorpay error for invoice ${invoice._id}:`, razorErr.message);
+                  results.errors.push({
+                    row: email,
+                    message: "Razorpay error: " + razorErr.message,
+                  });
+                }
+
                 results.invoices.push(invoice);
                 results.successful++;
               } catch (error) {
@@ -355,9 +417,7 @@ router.post(
               }
             }
 
-            // Clean up uploaded file
             fs.unlinkSync(filePath);
-
             res.json(results);
           } catch (error) {
             console.error("CSV processing error:", error);
@@ -370,6 +430,7 @@ router.post(
     }
   }
 );
+
 
 // Generate PDF for invoice
 router.get("/:id/pdf", auth, async (req, res) => {
@@ -442,7 +503,9 @@ router.post("/:id/send-email", auth, async (req, res) => {
     const invoice = await Invoice.findOne({
       _id: req.params.id,
       user: req.userId,
-    }).populate("client").populate({
+    })
+      .populate("client")
+      .populate({
         path: "user",
         select: "email businessname phone address gstin",
       });
@@ -475,16 +538,30 @@ router.post("/:id/send-email", auth, async (req, res) => {
     const msg = {
       to: recipientEmail || invoice.client.email,
       from: process.env.FROM_EMAIL,
-      subject: subject || `Invoice ${invoice.invoiceNumber} from ${invoice.user.businessname}`,
+      subject:
+        subject ||
+        `Invoice ${invoice.invoiceNumber} from ${invoice.user.businessname}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Invoice ${invoice.invoiceNumber}</h2>
           <p>Dear ${invoice.client.name},</p>
           <p>${
             message ||
-            "Please find your invoice attached. Thank you for your business!"
+            "Please find your invoice attached. You can pay securely using the button below."
           }</p>
-
+          <div style="text-align: center; margin: 20px 0;">
+            <a href="${invoice.paymentLink}" target="_blank" style="
+              background-color: #3b82f6;
+              color: white;
+              padding: 12px 20px;
+              border-radius: 6px;
+              text-decoration: none;
+              font-weight: bold;
+              display: inline-block;
+            ">
+              Pay Now
+            </a>
+          </div>
           <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3>Invoice Details:</h3>
             <p><strong>Invoice Number:</strong> ${invoice.invoiceNumber}</p>
@@ -526,60 +603,6 @@ router.post("/:id/send-email", auth, async (req, res) => {
   }
 });
 
-// Create payment link
-router.post("/:id/create-payment", auth, async (req, res) => {
-  try {
-    const invoice = await Invoice.findOne({
-      _id: req.params.id,
-      user: req.userId,
-    }).populate("client");
-    if (!invoice) {
-      return res.status(404).json({ message: "Invoice not found" });
-    }
-
-    // Create Razorpay payment link
-    const paymentLinkOptions = {
-      amount: Math.round(invoice.total * 100), // Amount in paise
-      currency: "INR",
-      accept_partial: false,
-      first_min_partial_amount: 0,
-      description: `Payment for Invoice ${invoice.invoiceNumber}`,
-      customer: {
-        name: invoice.client.name,
-        email: invoice.client.email,
-        contact: invoice.client.phone || undefined,
-      },
-      notify: {
-        sms: !!invoice.client.phone,
-        email: true,
-      },
-      reminder_enable: true,
-      notes: {
-        invoice_id: invoice._id.toString(),
-        invoice_number: invoice.invoiceNumber,
-      },
-      callback_url: `${process.env.FRONTEND_URL}/invoices/${invoice._id}/payment-success`,
-      callback_method: "get",
-    };
-
-    const paymentLink = await razorpay.paymentLink.create(paymentLinkOptions);
-
-    // Update invoice with payment link
-    invoice.paymentLink = paymentLink.short_url;
-    await invoice.save();
-
-    res.json({
-      message: "Payment link created successfully",
-      paymentLink: paymentLink.short_url,
-      paymentLinkId: paymentLink.id,
-    });
-  } catch (error) {
-    console.error("Payment link creation error:", error);
-    res
-      .status(500)
-      .json({ message: "Error creating payment link: " + error.message });
-  }
-});
 
 // Webhook to handle payment status updates
 router.post("/payment-webhook", async (req, res) => {

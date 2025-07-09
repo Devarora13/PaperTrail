@@ -16,6 +16,7 @@ import BulkInvoice from "./pages/BulkInvoice"
 import Settings from "./pages/Settings"
 import NotFound from "./pages/NotFound"
 import "./App.css"
+import PaymentSuccess from "./pages/PaymentSuccess"
 
 function App() {
   return (
@@ -122,6 +123,7 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
+                <Route path="/invoices/:id/payment-success" element={<PaymentSuccess />} />
                 {/* 404 Route */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

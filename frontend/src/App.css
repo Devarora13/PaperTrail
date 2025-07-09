@@ -2198,6 +2198,41 @@ select:focus {
   .invoice-grid {
     grid-template-columns: 1fr;
   }
+
+  /*********/
+  .payment-container {
+    padding: 1rem;
+  }
+
+  .payment-card {
+    padding: 2rem 1.5rem;
+  }
+
+  .payment-card h1 {
+    font-size: 2rem;
+  }
+
+  .payment-icon {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 1.5rem;
+  }
+
+  .payment-icon svg {
+    width: 48px;
+    height: 48px;
+  }
+
+  .payment-details {
+    padding: 1.5rem;
+  }
+
+  .detail-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
 }
 
 @media (max-width: 480px) {
@@ -2221,6 +2256,28 @@ select:focus {
   .toast-container {
     left: 1rem;
     right: 1rem;
+  }
+
+  /**************/
+  
+  .payment-card {
+    padding: 1.5rem 1rem;
+  }
+
+  .payment-card h1 {
+    font-size: 1.75rem;
+  }
+
+  .payment-card p {
+    font-size: 1rem;
+  }
+
+  .detail-row .value {
+    font-size: 0.875rem;
+  }
+
+  .detail-row .value.amount {
+    font-size: 1.125rem;
   }
 }
 
@@ -3016,6 +3073,156 @@ select:focus {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Payment Success Page Styles */
+.payment-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+}
+
+.payment-card {
+  background: var(--bg-primary, #f9f9f9);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 1.5rem;
+  padding: 3rem;
+  max-width: 600px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow-xl);
+  animation: paymentSlideIn 0.6s ease-out;
+}
+
+@keyframes paymentSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Icon Styles */
+.payment-icon {
+  margin: 0 auto 2rem;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  color: white;
+}
+
+/* State Variants */
+.payment-card.success .payment-icon {
+  background: linear-gradient(135deg, var(--success), #059669);
+  animation: successPulse 2s ease-in-out infinite;
+}
+
+.payment-card.failed .payment-icon,
+.payment-card.error .payment-icon {
+  background: linear-gradient(135deg, var(--danger), #dc2626);
+  animation: errorShake 0.5s ease-in-out;
+}
+
+.payment-card.cancelled .payment-icon {
+  background: linear-gradient(135deg, var(--warning), #d97706);
+}
+
+@keyframes successPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 20px rgba(16, 185, 129, 0);
+  }
+}
+
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* Headings and Text */
+.payment-card h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.payment-card.success h1 {
+  color: var(--success);
+}
+
+.payment-card.failed h1,
+.payment-card.error h1 {
+  color: var(--danger);
+}
+
+.payment-card.cancelled h1 {
+  color: var(--warning);
+}
+
+.payment-card p {
+  font-size: 1.125rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+/* Payment Details */
+.payment-details {
+  background: var(--bg-secondary);
+  border-radius: 1rem;
+  padding: 2rem;
+  margin: 2rem 0;
+  text-align: left;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-row .label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-row .value {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+}
+
+.detail-row .value.amount {
+  font-size: 1.25rem;
+  color: var(--success);
+}
+
+
 
 
 /* Not Found Page */
