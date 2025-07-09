@@ -376,7 +376,7 @@ const Home = () => {
             </div>
           </div>
           <div className="footer-bottom">
-            <p>&copy; 2024 PAPERTRAIL. All rights reserved.</p>
+            <p>&copy; 2025 PAPERTRAIL. All rights reserved.</p>
             <div className="footer-legal">
               <Link to="/privacy">Privacy Policy</Link>
               <Link to="/terms">Terms of Service</Link>
