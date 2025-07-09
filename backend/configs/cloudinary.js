@@ -14,6 +14,8 @@ const storage = new CloudinaryStorage({
     folder: "invoice-logos",
     allowed_formats: ["jpg", "jpeg", "png"],
     public_id: (req, file) => `user-${req.userId}-logo`,
+    overwrite: true, // force overwrite
+    invalidate: true, // THIS is important: invalidate old CDN cached version
   },
 });
 

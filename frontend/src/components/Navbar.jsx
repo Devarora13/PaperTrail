@@ -63,11 +63,7 @@ const Navbar = () => {
         <div className="user-menu">
           <div className="user-info">
             {user?.companyLogo ? (
-              <img
-                src={`${user.companyLogo}?t=${new Date().getTime()}`}
-                alt="Logo"
-                className="user-avatar user-avatar-img"
-              />
+              <img src={user.companyLogo} alt="User Avatar" className="user-avatar user-avatar-img" />
             ) : (
               <div className="user-avatar">
                 {user?.businessname?.charAt(0) || "U"}

@@ -132,8 +132,12 @@ const Settings = () => {
 
       // Update logo preview
       if (response.data.companyLogo) {
-        setLogoPreview(response.data.companyLogo); // Cloudinary already gives full URL
+        const timestamp = Date.now();
+        const logoWithCacheBypass = `${response.data.companyLogo}?t=${timestamp}`;
+        setLogoPreview(logoWithCacheBypass);
+        updateUser({ ...response.data, companyLogo: logoWithCacheBypass });
       }
+
       // Update user context
       updateUser(response.data);
     } catch (error) {
