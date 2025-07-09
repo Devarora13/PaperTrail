@@ -6,7 +6,7 @@ const multer = require("multer");
 const csv = require("csv-parser");
 const fs = require("fs");
 const path = require("path");
-const puppeteer = require("puppeteer");
+const { chromium } = require("playwright");
 const Razorpay = require("razorpay");
 const dotenv = require("dotenv").config();
 const router = express.Router();
@@ -21,7 +21,6 @@ const {
 
 const sgMail = require("@sendgrid/mail");
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
 
 // Configure multer for CSV uploads
 const upload = multer({ dest: "uploads/csv/" });
@@ -162,7 +161,7 @@ router.post("/", auth, async (req, res) => {
         contact: invoice.client.phone || undefined,
       },
       notify: {
-        sms: false, 
+        sms: false,
         email: false,
       },
       reminder_enable: true,
@@ -395,11 +394,16 @@ router.post(
                     callback_method: "get",
                   };
 
-                  const paymentLink = await razorpay.paymentLink.create(paymentLinkOptions);
+                  const paymentLink = await razorpay.paymentLink.create(
+                    paymentLinkOptions
+                  );
                   invoice.paymentLink = paymentLink.short_url;
                   await invoice.save();
                 } catch (razorErr) {
-                  console.error(`Razorpay error for invoice ${invoice._id}:`, razorErr.message);
+                  console.error(
+                    `Razorpay error for invoice ${invoice._id}:`,
+                    razorErr.message
+                  );
                   results.errors.push({
                     row: email,
                     message: "Razorpay error: " + razorErr.message,
@@ -431,7 +435,6 @@ router.post(
   }
 );
 
-
 // Generate PDF for invoice
 router.get("/:id/pdf", auth, async (req, res) => {
   let browser;
@@ -449,9 +452,8 @@ router.get("/:id/pdf", auth, async (req, res) => {
       return res.status(404).json({ message: "Invoice not found" });
     }
 
-    // Launch puppeteer
-    browser = await puppeteer.launch({
-      headless: true,
+    // Launch playwright
+    browser = await chromium.launch({
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
@@ -461,7 +463,7 @@ router.get("/:id/pdf", auth, async (req, res) => {
     const htmlContent = generateInvoiceHTML(invoice);
 
     // Set content and generate PDF
-    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+    await page.setContent(htmlContent, { waitUntil: "networkidle" });
 
     const pdfBuffer = await page.pdf({
       format: "A4",
@@ -515,14 +517,13 @@ router.post("/:id/send-email", auth, async (req, res) => {
     }
 
     // Generate PDF
-    browser = await puppeteer.launch({
-      headless: true,
+    browser = await chromium.launch({
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
     const page = await browser.newPage();
     const htmlContent = generateInvoiceHTML(invoice);
-    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+    await page.setContent(htmlContent, { waitUntil: "networkidle" });
 
     const pdfBuffer = await page.pdf({
       format: "A4",
@@ -602,7 +603,6 @@ router.post("/:id/send-email", auth, async (req, res) => {
     if (browser) await browser.close();
   }
 });
-
 
 // Webhook to handle payment status updates
 router.post("/payment-webhook", async (req, res) => {
