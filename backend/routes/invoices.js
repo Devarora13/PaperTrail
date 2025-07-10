@@ -6,7 +6,7 @@ const multer = require("multer");
 const csv = require("csv-parser");
 const fs = require("fs");
 const path = require("path");
-const { chromium } = require("playwright");
+const pdf = require("html-pdf-node");
 const Razorpay = require("razorpay");
 const dotenv = require("dotenv").config();
 const router = express.Router();
@@ -437,7 +437,6 @@ router.post(
 
 // Generate PDF for invoice
 router.get("/:id/pdf", auth, async (req, res) => {
-  let browser;
   try {
     const invoice = await Invoice.findOne({
       _id: req.params.id,
@@ -448,24 +447,15 @@ router.get("/:id/pdf", auth, async (req, res) => {
         path: "user",
         select: "email businessname phone address gstin",
       });
+
     if (!invoice) {
       return res.status(404).json({ message: "Invoice not found" });
     }
 
-    // Launch playwright
-    browser = await chromium.launch({
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-
-    const page = await browser.newPage();
-
-    // Generate HTML content
     const htmlContent = generateInvoiceHTML(invoice);
+    const file = { content: htmlContent };
 
-    // Set content and generate PDF
-    await page.setContent(htmlContent, { waitUntil: "networkidle" });
-
-    const pdfBuffer = await page.pdf({
+    const options = {
       format: "A4",
       printBackground: true,
       margin: {
@@ -474,9 +464,10 @@ router.get("/:id/pdf", auth, async (req, res) => {
         bottom: "20px",
         left: "20px",
       },
-    });
+    };
 
-    // Set response headers
+    const pdfBuffer = await pdf.generatePdf(file, options);
+
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
@@ -484,17 +475,13 @@ router.get("/:id/pdf", auth, async (req, res) => {
     );
     res.setHeader("Content-Length", pdfBuffer.length);
 
-    // Send PDF
     res.send(pdfBuffer);
   } catch (error) {
     console.error("PDF generation error:", error);
     res.status(500).json({ message: "Error generating PDF" });
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
   }
 });
+
 
 // Send invoice via email (SendGrid)
 router.post("/:id/send-email", auth, async (req, res) => {
@@ -517,15 +504,9 @@ router.post("/:id/send-email", auth, async (req, res) => {
     }
 
     // Generate PDF
-    browser = await chromium.launch({
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-
-    const page = await browser.newPage();
     const htmlContent = generateInvoiceHTML(invoice);
-    await page.setContent(htmlContent, { waitUntil: "networkidle" });
-
-    const pdfBuffer = await page.pdf({
+    const file = { content: htmlContent };
+    const options = {
       format: "A4",
       printBackground: true,
       margin: {
@@ -534,7 +515,9 @@ router.post("/:id/send-email", auth, async (req, res) => {
         bottom: "20px",
         left: "20px",
       },
-    });
+    };
+    const pdfBuffer = await pdf.generatePdf(file, options);
+
 
     const msg = {
       to: recipientEmail || invoice.client.email,
