@@ -43,8 +43,6 @@
 |----------|------------------|--------------------------|
 | ![Dashboard](https://github.com/Devarora13/PaperTrail/assets/.../dashboard.png) | ![Invoice](https://github.com/Devarora13/PaperTrail/assets/.../invoice.png) | ![Email](https://github.com/Devarora13/PaperTrail/assets/.../email.png) |
 
-> Replace with actual screenshots if available.
-
 ---
 
 ## 🔧 Setup Instructions
