@@ -46,15 +46,15 @@ router.put("/business", auth, upload.single("logo"), async (req, res) => {
     };
 
     if (req.file && req.file.path && req.file.filename) {
-      // ✅ If previous public ID exists, delete it
+      // If previous public ID exists, delete it
       const user = await User.findById(req.userId);
 
       if (user.companyLogoPublicId && user.companyLogoPublicId !== req.file.filename) {
         await cloudinary.uploader.destroy(user.companyLogoPublicId);
       }
 
-      updateData.companyLogo = req.file.path; // ✅ secure_url
-      updateData.companyLogoPublicId = req.file.filename; // ✅ public_id
+      updateData.companyLogo = req.file.path; // secure_url
+      updateData.companyLogoPublicId = req.file.filename; // public_id
     }
 
     const updatedUser = await User.findByIdAndUpdate(req.userId, updateData, {
